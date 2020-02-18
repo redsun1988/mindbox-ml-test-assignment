@@ -22,7 +22,7 @@ def transform_to_item_user_csr_matrix(purchases: pd.DataFrame) -> sparse.csr_mat
     ).tocsr()
     return item_users
 
-def transform_to_user_sex_csr_matrix(customers: pd.DataFrame) -> sparse.csr_matrix:
+def transform_to_user_sex_csr_matrix(customers: pd.DataFrame, sex_column_id) -> sparse.csr_matrix:
     def getSexLabel(x):
         if x == "Female":
             return 1
@@ -34,7 +34,7 @@ def transform_to_user_sex_csr_matrix(customers: pd.DataFrame) -> sparse.csr_matr
         (
             np.array([getSexLabel(s) for s in customers.sex]),
             (
-                np.array([0] * customers.customer_id.size),
+                np.array([sex_column_id] * customers.customer_id.size),
                 np.array(customers.customer_id),
             )
         )
@@ -50,13 +50,12 @@ def get_model() -> implicit.als.AlternatingLeastSquares:
     return model
 
 
-def get_recommendations(model: implicit.als.AlternatingLeastSquares, user_ids: Iterable[int], item_users: sparse.csr_matrix) -> List[List[int]]:
+def get_recommendations(model: implicit.als.AlternatingLeastSquares, user_ids: Iterable[int], item_users: sparse.csr_matrix, filter_items=None) -> List[List[int]]:
     user_items = item_users.T.tocsr()
     recommendations = []
     for user_id in user_ids:
-        recommendations.append([x[0] for x in model.recommend(userid=user_id, user_items=user_items, N=10)])
+        recommendations.append([x[0] for x in model.recommend(userid=user_id, user_items=user_items, N=10, filter_items=filter_items)])
     return recommendations
-
 
 def get_purchases_by_customer(purchases: pd.DataFrame) -> Tuple[List[int], List[List[int]]]:
     relevant = purchases.groupby('customer_id')['product_id'].apply(lambda s: s.values.tolist()).reset_index()
